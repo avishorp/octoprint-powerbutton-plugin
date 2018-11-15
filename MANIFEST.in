@@ -1,0 +1,4 @@
+include README.md
+recursive-include octoprint_powerbutton/templates *
+recursive-include octoprint_powerbutton/translations *
+recursive-include octoprint_powerbutton/static *
