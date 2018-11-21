@@ -13,7 +13,8 @@ import octoprint.plugin
 
 class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
                         octoprint.plugin.AssetPlugin,
-                        octoprint.plugin.TemplatePlugin):
+                        octoprint.plugin.TemplatePlugin,
+                        octoprint.plugin.StartupPlugin):
 
 	##~~ SettingsPlugin mixin
 
@@ -55,6 +56,9 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			)
 		)
 
+        def on_after_startup(self):
+            self._logger.info("Hello World")
+
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
 # ("OctoPrint-PluginSkeleton"), you may define that here. Same goes for the other metadata derived from setup.py that
@@ -69,4 +73,6 @@ def __plugin_load__():
 	__plugin_hooks__ = {
 		"octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information
 	}
+
+
 
