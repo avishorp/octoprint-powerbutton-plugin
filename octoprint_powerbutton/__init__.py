@@ -1,5 +1,6 @@
 # coding=utf-8
 from __future__ import absolute_import
+import raspi_power
 
 ### (Don't forget to remove me)
 # This is a basic skeleton for your plugin's __init__.py. You probably want to adjust the class name of your plugin
@@ -14,7 +15,8 @@ import octoprint.plugin
 class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
                         octoprint.plugin.AssetPlugin,
                         octoprint.plugin.TemplatePlugin,
-                        octoprint.plugin.StartupPlugin):
+                        octoprint.plugin.StartupPlugin,
+                        octoprint.plugin.SimpleApiPlugin):
 
 	##~~ SettingsPlugin mixin
 
@@ -32,7 +34,7 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			js=["js/powerbutton.js"],
 			css=["css/powerbutton.css"],
 			less=["less/powerbutton.less"]
-		)
+			)
 
 	##~~ Softwareupdate hook
 
@@ -56,8 +58,30 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			)
 		)
 
-        def on_after_startup(self):
-            self._logger.info("Hello World")
+	def on_after_startup(self):
+	    # Create a RaspiPower instance
+	    self.power_ctrl = raspi_power.RaspiPowerController(0, 0, 0, 0, self.on_power_state) 
+        #self._logger.info("Hello World")
+
+    ## SimpleApiPlugin
+        
+	def get_api_commands(self):
+		return dict(
+				power_on=[],
+				power_off=[]
+				)
+
+	def on_api_command(self, command, data):
+		if command == "power_on":
+			self._logger.info("Power on")
+			self._plugin_manager.send_plugin_message("powerbutton", "somedata")
+		elif command == "power_off":
+			self._logger.info("Power off")
+
+	##
+
+	def on_power_state(self, new_state):
+		self._logger.info("Power state changed")
 
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py

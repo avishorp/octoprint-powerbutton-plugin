@@ -8,22 +8,24 @@ $(function() {
     function PowerbuttonViewModel(parameters) {
         var self = this;
 
-        // assign the injected parameters, e.g.:
-        // self.loginStateViewModel = parameters[0];
-        // self.settingsViewModel = parameters[1];
+        self.printerStateViewModel = parameters[0];
+	self.dt = ko.observable("--");
 
-        // TODO: Implement your plugin's view model here.
+	n = 0;
+	setInterval(function() {
+		self.dt(n);
+		n += 1;
+	}, 2000);
+	
+	self.onDataUpdaterPluginMessage = function(plugin, message) {
+		console.log(plugin)
+		console.log(message)
+	}
     }
 
-    /* view model class, parameters for constructor, container to bind to
-     * Please see http://docs.octoprint.org/en/master/plugins/viewmodels.html#registering-custom-viewmodels for more details
-     * and a full list of the available options.
-     */
     OCTOPRINT_VIEWMODELS.push({
         construct: PowerbuttonViewModel,
-        // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
-        dependencies: [ /* "loginStateViewModel", "settingsViewModel" */ ],
-        // Elements to bind to, e.g. #settings_plugin_powerbutton, #tab_plugin_powerbutton, ...
-        elements: [ /* ... */ ]
+        dependencies: [ "printerStateViewModel" ],
+        elements: [ "#powerState" ]
     });
 });
