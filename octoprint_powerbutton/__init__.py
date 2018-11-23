@@ -1,5 +1,6 @@
 # coding=utf-8
 from __future__ import absolute_import
+import flask
 import raspi_power
 
 ### (Don't forget to remove me)
@@ -67,21 +68,27 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
         
 	def get_api_commands(self):
 		return dict(
-				power_on=[],
-				power_off=[]
+				power=['newState'],
 				)
 
 	def on_api_command(self, command, data):
-		if command == "power_on":
-			self._logger.info("Power on")
-			self._plugin_manager.send_plugin_message("powerbutton", "somedata")
-		elif command == "power_off":
-			self._logger.info("Power off")
+		if command == "power":
+			if data["newState"] == "on":
+				new_state = True
+			elif data["newState"] == "off":
+				new_state = False
+			else:
+				return flask.make_response("Illegal power state parameter", 400)
+
+			self._logger.info("Setting power to %s", "On" if new_state else "Off")
+			self.power_ctrl.set_power_state(new_state)
 
 	##
 
 	def on_power_state(self, new_state):
 		self._logger.info("Power state changed")
+		self._plugin_manager.send_plugin_message("powerbutton", { "newState": new_state })
+
 
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
