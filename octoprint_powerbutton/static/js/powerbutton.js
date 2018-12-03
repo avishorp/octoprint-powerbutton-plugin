@@ -20,46 +20,23 @@ $(function() {
         var self = this;
 
 		self.printerStateViewModel = parameters[0];
-		self.switchState = ko.observable(STATE_UNKNOWN)
+		self.switchState = ko.observable(STATE_OFF)
 
-		self.checked = ko.observable(true)
-		self.disabled = ko.observable(false)
-		self.cssOption = ko.observable(null)
-
-		// Subscribe to power state change. Will update
-		// the display accordingly.
-		self.switchState.subscribe(function(v) {
-			console.log("New state: " + self.switchState())
-
-			switch(v) {
-				case STATE_ON:
-					self.checked(true)
-					self.disabled(false)
-					self.cssOption('')
-					break
-
-				case STATE_ON_PENDING:
-					self.checked(true)
-					self.disabled(true)
-					self.cssOption('slider-wait')
-					break
-
-				case STATE_OFF:
-					self.checked(false)
-					self.disabled(false)
-					self.cssOption('')
-					break
-
-				case STATE_OFF_PENDING:
-					self.checked(false)
-					self.disabled(true)
-					self.cssOption('slider-wait')
-					break
-			}
-		})
+		self.checked = ko.pureComputed(function() {
+			var state = self.switchState()
+			return (state === STATE_ON || state === STATE_ON_PENDING)
+		}, self)
+		self.disabled = ko.pureComputed(function() {
+			var state = self.switchState()
+			return (state === STATE_OFF_PENDING || state === STATE_ON_PENDING)
+		}, self)
+		self.cssOption = ko.pureComputed(function() {
+			var state = self.switchState()
+			return (state === STATE_OFF_PENDING || state === STATE_ON_PENDING)? 'slider-wait' : ''
+		}, self)
 
 		// Subscribe to switch changes (clicks)
-		self.checked.subscribe(function(v) {
+		$('#power-button-top input').click(function(v) {
 			if (v)
 				self.switchState(STATE_ON_PENDING)
 			else 
