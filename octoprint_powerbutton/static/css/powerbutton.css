@@ -47,7 +47,16 @@
   background-color: white;
   -webkit-transition: .4s;
   transition: .4s;
+}
+
+.slider-lock:before {
   content: url(/plugin/powerbutton/static/img/lock.svg);
+
+}
+
+.slider-wait:before {
+  content: url(/plugin/powerbutton/static/img/wait_circle.gif);
+
 }
 
 

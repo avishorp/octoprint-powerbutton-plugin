@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 import flask
 import raspi_power
+import time
 
 ### (Don't forget to remove me)
 # This is a basic skeleton for your plugin's __init__.py. You probably want to adjust the class name of your plugin
@@ -80,6 +81,7 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			else:
 				return flask.make_response("Illegal power state parameter", 400)
 
+			time.sleep(5)  # For testing
 			self._logger.info("Setting power to %s", "On" if new_state else "Off")
 			self.power_ctrl.set_power_state(new_state)
 
