@@ -63,13 +63,13 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 	def on_after_startup(self):
 	    # Create a RaspiPower instance
 	    self.power_ctrl = raspi_power.RaspiPowerController(0, 0, 0, 0, self.on_power_state) 
-        #self._logger.info("Hello World")
 
     ## SimpleApiPlugin
         
 	def get_api_commands(self):
 		return dict(
-				power=['newState'],
+				power = ['newState'],
+				refresh_state = []
 				)
 
 	def on_api_command(self, command, data):
@@ -84,12 +84,23 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			time.sleep(5)  # For testing
 			self._logger.info("Setting power to %s", "On" if new_state else "Off")
 			self.power_ctrl.set_power_state(new_state)
+		
+		elif command == "refresh_state":
+			self.notify_power_state()
+
+	def on_api_get(self, request):
+		return flask.jsonify(powerState = self.power_ctrl.get_power_state())
 
 	##
 
 	def on_power_state(self, new_state):
 		self._logger.info("Power state changed")
-		self._plugin_manager.send_plugin_message("powerbutton", { "newState": new_state })
+		self.notify_power_state()
+
+	def notify_power_state(self):
+		if (hasattr(self, 'power_ctrl')):
+			self._plugin_manager.send_plugin_message("powerbutton", 
+				{ "newState": self.power_ctrl.get_power_state() })
 
 
 

@@ -37,6 +37,8 @@ $(function() {
 
 		// Subscribe to switch changes (clicks)
 		$('#power-button-top input').click(function(v) {
+			var v = $(this)[0].checked
+			
 			if (v)
 				self.switchState(STATE_ON_PENDING)
 			else 
@@ -57,6 +59,8 @@ $(function() {
 		})
 	
 		self.onDataUpdaterPluginMessage = function(plugin, message) {
+			console.log("update ")
+			console.log(message)
 			if (plugin === "powerbutton") {
 
 				if (message.newState === true)
@@ -64,6 +68,10 @@ $(function() {
 				else if (message.newState === false)
 					self.switchState(STATE_OFF)
 			}
+		}
+
+		self.onUserLoggedIn = function() {
+			OctoPrint.plugins.powerbuttonplugin.refreshPowerState()
 		}
 
     }
@@ -95,6 +103,7 @@ $(function() {
 			this.base = base;
 		};
 	
+		// Request the server to apply a new power state
 		PowerButtonPluginClient.prototype.requestPowerState = function(newState, cb) {
 			
 			// Issue an API request
@@ -107,6 +116,16 @@ $(function() {
 				cb(null)
 			})
 		};
+
+		// Request the server to refresh (resend) the current power state
+		PowerButtonPluginClient.prototype.refreshPowerState = function() {
+			// Issue an API request
+			OctoPrint.ajaxWithData("POST", "api/plugin/" + POWER_BUTTON_PLUGIN, JSON.stringify({
+				command: "refresh_state"
+			}), {
+				contentType: "application/json"
+			})
+		}
 	
 		OctoPrintClient.registerPluginComponent("powerbuttonplugin", PowerButtonPluginClient);
 		return PowerButtonPluginClient;
