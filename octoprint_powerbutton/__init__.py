@@ -88,9 +88,6 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 		elif command == "refresh_state":
 			self.notify_power_state()
 
-	def on_api_get(self, request):
-		return flask.jsonify(powerState = self.power_ctrl.get_power_state())
-
 	##
 
 	def on_power_state(self, new_state):

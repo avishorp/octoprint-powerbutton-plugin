@@ -4,10 +4,14 @@
 
 .switch {
   position: relative;
-  display: inline-block;
+  display: none;
   width: 60px;
   height: 34px;
   margin-top: 4px;
+}
+
+.switch-visible {
+  display: inline-block;
 }
 
 

@@ -20,7 +20,7 @@ $(function() {
         var self = this;
 
 		self.printerStateViewModel = parameters[0];
-		self.switchState = ko.observable(STATE_OFF)
+		self.switchState = ko.observable(STATE_UNKNOWN)
 
 		self.checked = ko.pureComputed(function() {
 			var state = self.switchState()
@@ -34,11 +34,16 @@ $(function() {
 			var state = self.switchState()
 			return (state === STATE_OFF_PENDING || state === STATE_ON_PENDING)? 'slider-wait' : ''
 		}, self)
+		
+		self.visible = ko.pureComputed(function() {
+			return self.switchState() === STATE_UNKNOWN? '' : 'switch-visible'
+		}, self)
+		
 
 		// Subscribe to switch changes (clicks)
 		$('#power-button-top input').click(function(v) {
 			var v = $(this)[0].checked
-			
+
 			if (v)
 				self.switchState(STATE_ON_PENDING)
 			else 
@@ -59,8 +64,6 @@ $(function() {
 		})
 	
 		self.onDataUpdaterPluginMessage = function(plugin, message) {
-			console.log("update ")
-			console.log(message)
 			if (plugin === "powerbutton") {
 
 				if (message.newState === true)
@@ -82,7 +85,7 @@ $(function() {
     OCTOPRINT_VIEWMODELS.push({
         construct: PowerbuttonViewModel,
         dependencies: [ "printerStateViewModel" ],
-        elements: [ "#power-button-top input", "#power-button-top span" ]
+        elements: [ "#power-button-top" ]
 	});
 	
 	// Register the plugin
