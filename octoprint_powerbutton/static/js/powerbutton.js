@@ -12,6 +12,7 @@ $(function() {
 	var STATE_OFF = 'off'
 	var STATE_ON_PENDING = 'on_pending'
 	var STATE_OFF_PENDING = 'off_pending'
+	var STATE_ON_LOCKED = 'on_locked'
 
 	// Create a ViewModel
 	/////////////////////
@@ -24,15 +25,20 @@ $(function() {
 
 		self.checked = ko.pureComputed(function() {
 			var state = self.switchState()
-			return (state === STATE_ON || state === STATE_ON_PENDING)
+			return (state === STATE_ON || state === STATE_ON_PENDING || state === STATE_ON_LOCKED)
 		}, self)
 		self.disabled = ko.pureComputed(function() {
 			var state = self.switchState()
-			return (state === STATE_OFF_PENDING || state === STATE_ON_PENDING)
+			return (state === STATE_OFF_PENDING || state === STATE_ON_PENDING || state === STATE_ON_LOCKED)
 		}, self)
 		self.cssOption = ko.pureComputed(function() {
 			var state = self.switchState()
-			return (state === STATE_OFF_PENDING || state === STATE_ON_PENDING)? 'slider-wait' : ''
+			if (state === STATE_OFF_PENDING || state === STATE_ON_PENDING)
+				return 'slider-wait'
+			else if (state === STATE_ON_LOCKED)
+				return 'slider-lock'
+			else
+				return ''
 		}, self)
 		
 		self.visible = ko.pureComputed(function() {
@@ -75,6 +81,18 @@ $(function() {
 
 		self.onUserLoggedIn = function() {
 			OctoPrint.plugins.powerbuttonplugin.refreshPowerState()
+		}
+
+		self.onEventPrintStarted = function() {
+			self.switchState(STATE_ON_LOCKED)
+		}
+
+		self.onEventPrintFailed = function() {
+			self.switchState(STATE_ON)
+		}
+
+		self.onEventPrintDone = function() {
+			self.switchState(STATE_ON)
 		}
 
     }
