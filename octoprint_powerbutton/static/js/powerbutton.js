@@ -45,6 +45,9 @@ $(function() {
 			return self.switchState() === STATE_UNKNOWN? '' : 'switch-visible'
 		}, self)
 		
+		var disableConnetcButton = function(v) {
+			$('button#printer_connect').each(function(i,e) { e.disabled = v })
+		}
 
 		// Subscribe to switch changes (clicks)
 		$('#power-button-top input').click(function(v) {
@@ -57,6 +60,9 @@ $(function() {
 			}
 			else {
 				self.switchState(STATE_OFF_PENDING)
+
+				// Disable the "connect" button
+				disableConnetcButton(true)
 
 				// When switching off, disconnect first
 				OctoPrint.connection.disconnect()
@@ -82,10 +88,19 @@ $(function() {
 		self.onDataUpdaterPluginMessage = function(plugin, message) {
 			if (plugin === "powerbutton") {
 
-				if (message.newState === true)
+				if (message.newState === true) {
 					self.switchState(STATE_ON)
-				else if (message.newState === false)
+
+					// Enable the "connect" button
+					disableConnetcButton(false)
+
+				}
+				else if (message.newState === false) {
 					self.switchState(STATE_OFF)
+
+					// Disable the "connect" button
+					disableConnetcButton(true)
+				}
 			}
 		}
 
