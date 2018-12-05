@@ -49,24 +49,34 @@ $(function() {
 		// Subscribe to switch changes (clicks)
 		$('#power-button-top input').click(function(v) {
 			var v = $(this)[0].checked
+			var disconnectPromise = $.Deferred()
 
-			if (v)
+			if (v) {
 				self.switchState(STATE_ON_PENDING)
-			else 
+				disconnectPromise.resolve()
+			}
+			else {
 				self.switchState(STATE_OFF_PENDING)
 
-			OctoPrint.plugins.powerbuttonplugin.requestPowerState(v, function(error) {
-				if (error) {
-					// TODO: Show error message
+				// When switching off, disconnect first
+				OctoPrint.connection.disconnect()
+					.done(function() { disconnectPromise.resolve(); })
+			}
 
-					// Failure
-					if (self.switchState() === STATE_OFF_PENDING)
-						self.switchState(STATE_ON)
-					else if (self.switchState() === STATE_ON_PENDING)
-						self.switchState(STATE_OFF)
-				}
-
-			})
+			disconnectPromise.done(function() {
+				OctoPrint.plugins.powerbuttonplugin.requestPowerState(v, function(error) {
+					if (error) {
+						// TODO: Show error message
+	
+						// Failure
+						if (self.switchState() === STATE_OFF_PENDING)
+							self.switchState(STATE_ON)
+						else if (self.switchState() === STATE_ON_PENDING)
+							self.switchState(STATE_OFF)
+					}
+	
+				})
+			})			
 		})
 	
 		self.onDataUpdaterPluginMessage = function(plugin, message) {
