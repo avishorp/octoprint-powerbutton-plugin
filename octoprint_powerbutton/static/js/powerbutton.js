@@ -14,6 +14,11 @@ $(function() {
 	var STATE_OFF_PENDING = 'off_pending'
 	var STATE_ON_LOCKED = 'on_locked'
 
+	var CONNECT_BTN_TOOLTIP = "To connect to the printer, first turn its power on"
+
+	// Enable tooltips
+	$(document).tooltip()
+
 	// Create a ViewModel
 	/////////////////////
 
@@ -46,7 +51,14 @@ $(function() {
 		}, self)
 		
 		var disableConnetcButton = function(v) {
-			$('button#printer_connect').each(function(i,e) { e.disabled = v })
+			$('button#printer_connect').each(function(i,e) { 
+				e.disabled = v 
+				if (v)
+					e.title = CONNECT_BTN_TOOLTIP
+				else
+					e.title = ''
+			})
+
 		}
 
 		// Subscribe to switch changes (clicks)
@@ -88,19 +100,24 @@ $(function() {
 		self.onDataUpdaterPluginMessage = function(plugin, message) {
 			if (plugin === "powerbutton") {
 
-				if (message.newState === true) {
+				if (message.powerState === "on") {
 					self.switchState(STATE_ON)
 
 					// Enable the "connect" button
 					disableConnetcButton(false)
 
 				}
-				else if (message.newState === false) {
+				else if (message.powerState === "off") {
 					self.switchState(STATE_OFF)
 
 					// Disable the "connect" button
 					disableConnetcButton(true)
 				}
+				else if (message.powerState === "locked") {
+					console.log("power_state locked")
+				}
+				else
+					console.error("PowerButton plugin: Power state error")
 			}
 		}
 

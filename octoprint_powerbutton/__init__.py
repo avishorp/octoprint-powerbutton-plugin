@@ -62,7 +62,7 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 
 	def on_after_startup(self):
 	    # Create a RaspiPower instance
-	    self.power_ctrl = raspi_power.RaspiPowerController(0, 0, 0, 0, self.on_power_state) 
+	    self.power_ctrl = raspi_power.RaspiPowerController(None, None, None, None, self.on_power_state) 
 
     ## SimpleApiPlugin
         
@@ -75,9 +75,9 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 	def on_api_command(self, command, data):
 		if command == "power":
 			if data["newState"] == "on":
-				new_state = True
+				new_state = raspi_power.POWER_STATE_ON
 			elif data["newState"] == "off":
-				new_state = False
+				new_state = raspi_power.POWER_STATE_OFF
 			else:
 				return flask.make_response("Illegal power state parameter", 400)
 
@@ -96,8 +96,18 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 
 	def notify_power_state(self):
 		if (hasattr(self, 'power_ctrl')):
+			raw_power_state = self.power_ctrl.get_power_state()
+			if raw_power_state == raspi_power.POWER_STATE_OFF:
+				power_state = "off"
+			elif raw_power_state == raspi_power.POWER_STATE_ON:
+				power_state = "on"
+			elif raw_power_state == raspi_power.POWER_STATE_LOCKED:
+				power_state = "locked"
+			else:
+				power_state = "unknown"
+
 			self._plugin_manager.send_plugin_message("powerbutton", 
-				{ "newState": self.power_ctrl.get_power_state() })
+				{ "powerState": power_state })
 
 
 
