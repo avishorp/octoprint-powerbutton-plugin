@@ -114,7 +114,7 @@ $(function() {
 					disableConnetcButton(true)
 				}
 				else if (message.powerState === "locked") {
-					console.log("power_state locked")
+					self.switchState(STATE_ON_LOCKED)
 				}
 				else
 					console.error("PowerButton plugin: Power state error")
@@ -123,18 +123,6 @@ $(function() {
 
 		self.onUserLoggedIn = function() {
 			OctoPrint.plugins.powerbuttonplugin.refreshPowerState()
-		}
-
-		self.onEventPrintStarted = function() {
-			self.switchState(STATE_ON_LOCKED)
-		}
-
-		self.onEventPrintFailed = function() {
-			self.switchState(STATE_ON)
-		}
-
-		self.onEventPrintDone = function() {
-			self.switchState(STATE_ON)
 		}
 
     }

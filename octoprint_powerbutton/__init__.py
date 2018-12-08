@@ -18,7 +18,8 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
                         octoprint.plugin.AssetPlugin,
                         octoprint.plugin.TemplatePlugin,
                         octoprint.plugin.StartupPlugin,
-                        octoprint.plugin.SimpleApiPlugin):
+                        octoprint.plugin.SimpleApiPlugin,
+						octoprint.plugin.EventHandlerPlugin):
 
 	##~~ SettingsPlugin mixin
 
@@ -109,6 +110,13 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			self._plugin_manager.send_plugin_message("powerbutton", 
 				{ "powerState": power_state })
 
+	##
+
+	def on_event(self, event, payload):
+		if (event == "PrintStarted"):
+			self.power_ctrl.set_power_state(raspi_power.POWER_STATE_LOCKED)
+		elif (event == "PrintFailed" or event == "PrintFinished"):
+			self.power_ctrl.set_power_state(raspi_power.POWER_STATE_ON)
 
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
