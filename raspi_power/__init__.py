@@ -32,7 +32,7 @@ class RaspiPowerController:
         self.cb = cb
 
         # Setup all the assigned GPIO pons
-        self.__setupGPIO()
+        self.__setup_GPIO()
 
         # Set the initial power state to OFF
         self.set_power_state(POWER_STATE_OFF)
@@ -57,14 +57,14 @@ class RaspiPowerController:
 
         # Apply it
         if self.power_state == POWER_STATE_ON:
-            self.__setRelay(True)
-            self.__setLEDColor(LED_COLOR_GREEN)
+            self.__set_relay(True)
+            self.__set_LED_color(LED_COLOR_GREEN)
         elif self.power_state == POWER_STATE_LOCKED:
-            self.__setRelay(True)
-            self.__setLEDColor(LED_COLOR_YELLOW)
+            self.__set_relay(True)
+            self.__set_LED_color(LED_COLOR_YELLOW)
         else:
-            self.__setRelay(False)
-            self.__setLEDColor(LED_COLOR_RED)
+            self.__set_relay(False)
+            self.__set_LED_color(LED_COLOR_RED)
 
         # If a callback is set, let it know
         if (self.cb is not None):
@@ -81,50 +81,50 @@ class RaspiPowerController:
         file(os.path.join(SYSFS_GPIO, "export"), 'w').write('%d\n' % pin)
 
     # Setup a GPIO pin as in (input = true) or outpu (input = false)
-    def __setDirection(self, pin, input):
+    def __set_direction(self, pin, input):
         s = "in" if input == True else "out"
         file(os.path.join(SYSFS_GPIO, "gpio%d/direction" % pin), 'w').write("%s\n" % s)
 
     # Set the value of an output pin
-    def __setValue(self, pin, value):
+    def __set_value(self, pin, value):
         s = "1" if value == True else "0"
         file(os.path.join(SYSFS_GPIO, "gpio%d/value" % pin), 'w').write("%s\n" % s)
 
-    def __setupGPIO(self):
+    def __setup_GPIO(self):
         if self.gpio_relay is not None:
             self.__export(self.gpio_relay)
-            self.__setDirection(self.gpio_relay, False)
-            self.__setValue(self.gpio_relay, False)
+            self.__set_direction(self.gpio_relay, False)
+            self.__set_value(self.gpio_relay, False)
 
         if self.gpio_red is not None:
             self.__export(self.gpio_red)
-            self.__setDirection(self.gpio_red, False)
-            self.__setValue(self.gpio_red, False)
+            self.__set_direction(self.gpio_red, False)
+            self.__set_value(self.gpio_red, False)
 
         if self.gpio_green is not None:
             self.__export(self.gpio_green)
-            self.__setDirection(self.gpio_green, False)
-            self.__setValue(self.gpio_green, False)
+            self.__set_direction(self.gpio_green, False)
+            self.__set_value(self.gpio_green, False)
 
         if self.gpio_button is not None:
             self.__export(self.gpio_button)
-            self.__setDirection(self.gpio_button, True)
+            self.__set_direction(self.gpio_button, True)
 
-    def __setLEDColor(self, color):
+    def __set_LED_color(self, color):
         if self.gpio_red is None or self.gpio_green is None:
             return
 
         red_value = (color == LED_COLOR_RED) or (color == LED_COLOR_YELLOW)
         green_value = (color == LED_COLOR_GREEN) or (color == LED_COLOR_YELLOW)
 
-        self.__setValue(self.gpio_red, red_value)
-        self.__setValue(self.gpio_green, green_value)
+        self.__set_value(self.gpio_red, red_value)
+        self.__set_value(self.gpio_green, green_value)
 
-    def __setRelay(self, state):
+    def __set_relay(self, state):
         if self.gpio_relay is None:
             return
 
-        self.__setValue(self.gpio_relay, state)
+        self.__set_value(self.gpio_relay, state)
 
     def __button_thread(self):
         if self.gpio_button is None:
