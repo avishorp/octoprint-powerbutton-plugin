@@ -80,6 +80,10 @@ class RaspiPowerController:
         # subsystem) or not writeable
         file(os.path.join(SYSFS_GPIO, "export"), 'w').write('%d\n' % pin)
 
+        # Small delay to allow the change to settle, before trying to
+        # make further modifications
+        time.sleep(0.1)
+
     # Setup a GPIO pin as in (input = true) or outpu (input = false)
     def __set_direction(self, pin, input):
         s = "in" if input == True else "out"
