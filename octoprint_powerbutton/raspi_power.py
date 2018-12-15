@@ -2,10 +2,7 @@ import types
 import os.path
 from threading import Thread
 import time
-
-POWER_STATE_OFF = 0
-POWER_STATE_ON = 1
-POWER_STATE_LOCKED = 2
+from octoprint_powerbutton.power_states import *
 
 SYSFS_GPIO = '/sys/class/gpio'
 
@@ -20,13 +17,16 @@ BUTTON_PRESS_VALUE = '0'
 SHORT_PERIOD = 15
 LONG_PERIOD = 50
 
-class RaspiPowerController:
+def prop_or_none(dict, prop):
+    return dict[prop] if prop in dict else None
 
-    def __init__(self, gpio_relay, gpio_button, gpio_red, gpio_green, cb = None):
-        self.gpio_relay = gpio_relay
-        self.gpio_button = gpio_button
-        self.gpio_red = gpio_red
-        self.gpio_green = gpio_green
+class RaspiPowerControl:
+
+    def __init__(self, cb = None, settings):
+        self.gpio_relay = prop_or_none(settings, "gpio_relay")
+        self.gpio_button = prop_or_none(settings, "gpio_button")
+        self.gpio_red = prop_or_none(settings, "gpio_red")
+        self.gpio_green = prop_or_none(settings, "gpio_green")
 
         assert(cb is None or callable(cb))
         self.cb = cb
