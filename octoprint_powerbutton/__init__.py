@@ -134,8 +134,11 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 	def on_event(self, event, payload):
 		if (event == "PrintStarted"):
 			self.power_ctrl.set_power_state(POWER_STATE_LOCKED)
-		elif (event == "PrintFailed" or event == "PrintFinished"):
-			self.power_ctrl.set_power_state(POWER_STATE_ON)
+		elif (event == "PrintFailed" or event == "PrintDone"):
+			# Get the current power state. If it's not "locked", leave
+			# it alone
+			if (self.power_ctrl.get_power_state() == POWER_STATE_LOCKED):
+				self.power_ctrl.set_power_state(POWER_STATE_ON)
 
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
