@@ -1,7 +1,7 @@
 # coding=utf-8
 from __future__ import absolute_import
 import flask
-import raspi_power
+import octoprint_powerbutton.raspi_power as raspi_power
 import time
 from octoprint_powerbutton.power_ctrl_stub import StubPowerController 
 from octoprint_powerbutton.power_states import *
@@ -32,7 +32,10 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 				gpio_relay = 17,
 				gpio_button = 22,
 				gpio_red = 3,
-				gpio_green = 2
+				gpio_green = 2,
+				led_polarity = True,
+				button_polarity = False,
+				relay_polarity = True
 			)
 		)
 
@@ -74,7 +77,7 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 		power_module_name = self._settings.get(["power_ctrl_module"])
 		if power_module_name == "raspi_power":
 			raspi_power_settings = self._settings.get(['raspi_power'])
-	    	self.power_ctrl = raspi_power.RaspiPowerControl(raspi_power_settings, self.on_power_state)
+			self.power_ctrl = raspi_power.RaspiPowerControl(self.on_power_state, raspi_power_settings)
 		elif power_module_name == "stub":
 			self.power_ctrl = StubPowerController(self._logger, self.on_power_state)
 		else:

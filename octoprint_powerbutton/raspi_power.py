@@ -11,22 +11,22 @@ LED_COLOR_RED = 1
 LED_COLOR_GREEN = 2
 LED_COLOR_YELLOW = 3
 
-BUTTON_RELEASE_VALUE = '1'
-BUTTON_PRESS_VALUE = '0'
-
 SHORT_PERIOD = 15
 LONG_PERIOD = 50
 
-def prop_or_none(dict, prop):
-    return dict[prop] if prop in dict else None
+def prop_or_default(dict, prop, default = None):
+    return dict[prop] if prop in dict else default
 
 class RaspiPowerControl:
 
-    def __init__(self, cb = None, settings):
-        self.gpio_relay = prop_or_none(settings, "gpio_relay")
-        self.gpio_button = prop_or_none(settings, "gpio_button")
-        self.gpio_red = prop_or_none(settings, "gpio_red")
-        self.gpio_green = prop_or_none(settings, "gpio_green")
+    def __init__(self, cb = None, settings = {}):
+        self.gpio_relay = prop_or_default(settings, "gpio_relay")
+        self.gpio_button = prop_or_default(settings, "gpio_button")
+        self.gpio_red = prop_or_default(settings, "gpio_red")
+        self.gpio_green = prop_or_default(settings, "gpio_green")
+        self.led_polarity = prop_or_default(settings, "led_polarity", True)
+        self.relay_polarity = prop_or_default(settings, "relay_polarity", True)
+        self.button_polarity = prop_or_default(settings, "button_polarity", False)
 
         assert(cb is None or callable(cb))
         self.cb = cb
@@ -118,8 +118,8 @@ class RaspiPowerControl:
         if self.gpio_red is None or self.gpio_green is None:
             return
 
-        red_value = (color == LED_COLOR_RED) or (color == LED_COLOR_YELLOW)
-        green_value = (color == LED_COLOR_GREEN) or (color == LED_COLOR_YELLOW)
+        red_value = ((color == LED_COLOR_RED) or (color == LED_COLOR_YELLOW)) ^ (not self.led_polarity)
+        green_value = ((color == LED_COLOR_GREEN) or (color == LED_COLOR_YELLOW)) ^ (not self.led_polarity)
 
         self.__set_value(self.gpio_red, red_value)
         self.__set_value(self.gpio_green, green_value)
@@ -128,7 +128,7 @@ class RaspiPowerControl:
         if self.gpio_relay is None:
             return
 
-        self.__set_value(self.gpio_relay, state)
+        self.__set_value(self.gpio_relay ^ (not self.relay_polarity), state)
 
     def __button_thread(self):
         if self.gpio_button is None:
@@ -140,7 +140,7 @@ class RaspiPowerControl:
         
         while(self.running):
             # Read the button value
-            v = file(gpio_value_file).read().startswith(BUTTON_PRESS_VALUE)
+            v = (file(gpio_value_file).read().startswith('0')) ^ (not self.button_polarity)
             
             if not v:
                 # Button released
