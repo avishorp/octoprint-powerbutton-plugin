@@ -33,8 +33,8 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 				gpio_button = 22,
 				gpio_red = 3,
 				gpio_green = 2,
-				led_polarity = True,
-				button_polarity = False,
+				led_polarity = False,
+				button_polarity = True,
 				relay_polarity = True
 			)
 		)
