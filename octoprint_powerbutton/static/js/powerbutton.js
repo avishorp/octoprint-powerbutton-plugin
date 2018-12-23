@@ -7,43 +7,72 @@
 $(function() {
 	var POWER_BUTTON_PLUGIN = "powerbutton"
 
-	var STATE_UNKNOWN = 'unknown'
-	var STATE_ON = 'on'
-	var STATE_OFF = 'off'
-	var STATE_ON_PENDING = 'on_pending'
-	var STATE_OFF_PENDING = 'off_pending'
-	var STATE_ON_LOCKED = 'on_locked'
+	/* Plugin states */
+	var STATE_UNKNOWN = 'unknown'          // Unknown state
+	var STATE_ON = 'on'                    // Powered on
+	var STATE_OFF = 'off'                  // Powered off
+	var STATE_ON_PENDING = 'on_pending'    // Power-on command pending
+	var STATE_OFF_PENDING = 'off_pending'  // Power-off command pending
+	var STATE_ON_LOCKED = 'on_locked'      // Powered on and locked
+	var STATE_AUTOOFF = 'auto_off'         // Wait for auto power off
 
 	var CONNECT_BTN_TOOLTIP = "To connect to the printer, first turn its power on"
 
 	// Enable tooltips
 	$(document).tooltip()
 
+	// Helper function - Convert a progress range of 0 - 100 to 0 to 12
+	// Used for showing a progress bar for auto-off function
+	function autoProgress(progress) {
+		if (progress >= 100)
+			return 12;
+		if (progress <= 0)
+			return 0;
+			
+		return Math.round((progress / 100.0)*12);
+	}
+
 	// Create a ViewModel
 	/////////////////////
 
     function PowerbuttonViewModel(parameters) {
         var self = this;
+/* Test */
+var p = 100;
+setTimeout(() => {
+	setInterval(() => {  
+		console.log(p)
+	 self.autoPowerOffProgress(p)
+	 p -= 10
+	 if (p < 0) p = 100;
+	}, 1000)
+	
+}, 3000)
 
 		self.printerStateViewModel = parameters[0];
 		self.switchState = ko.observable(STATE_UNKNOWN)
+		self.autoPowerOffProgress = ko.observable(0)
 
 		self.checked = ko.pureComputed(function() {
 			var state = self.switchState()
+
 			return (state === STATE_ON || state === STATE_ON_PENDING || state === STATE_ON_LOCKED)
 		}, self)
 		self.disabled = ko.pureComputed(function() {
 			var state = self.switchState()
+
 			return (state === STATE_OFF_PENDING || state === STATE_ON_PENDING || state === STATE_ON_LOCKED)
 		}, self)
 		self.cssOption = ko.pureComputed(function() {
 			var state = self.switchState()
+			var progress = self.autoPowerOffProgress()
+
 			if (state === STATE_OFF_PENDING || state === STATE_ON_PENDING)
 				return 'slider-wait'
 			else if (state === STATE_ON_LOCKED)
 				return 'slider-lock'
 			else
-				return ''
+				return 'slider-auto' + autoProgress(progress)
 		}, self)
 		
 		self.visible = ko.pureComputed(function() {
@@ -145,9 +174,15 @@ $(function() {
 			factory(window.OctoPrintClient);
 		}
 
-		// Preload the "wait circle" image
+		// Preload images
 		var loadImg = new Image()
+		images = []
 		loadImg.src = "/plugin/powerbutton/static/img/wait_circle.gif";
+		for(var i = 0; i <=12; i++) {
+			var loadImg = new Image()
+			loadImg.src = "/plugin/powerbutton/static/img/auto" + i + ".png"
+			images.push(loadImg)
+		}
 	})(window || this, function(OctoPrintClient) {
 
 		var PowerButtonPluginClient = function(base) {

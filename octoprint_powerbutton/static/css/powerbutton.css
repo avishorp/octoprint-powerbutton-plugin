@@ -63,6 +63,19 @@
 
 }
 
+.slider-auto0:before { content: url(/plugin/powerbutton/static/img/auto0.png); }
+.slider-auto1:before { content: url(/plugin/powerbutton/static/img/auto1.png); }
+.slider-auto2:before { content: url(/plugin/powerbutton/static/img/auto2.png); }
+.slider-auto3:before { content: url(/plugin/powerbutton/static/img/auto3.png); }
+.slider-auto4:before { content: url(/plugin/powerbutton/static/img/auto4.png); }
+.slider-auto5:before { content: url(/plugin/powerbutton/static/img/auto5.png); }
+.slider-auto6:before { content: url(/plugin/powerbutton/static/img/auto6.png); }
+.slider-auto7:before { content: url(/plugin/powerbutton/static/img/auto7.png); }
+.slider-auto8:before { content: url(/plugin/powerbutton/static/img/auto8.png); }
+.slider-auto9:before { content: url(/plugin/powerbutton/static/img/auto9.png); }
+.slider-auto10:before { content: url(/plugin/powerbutton/static/img/auto10.png); }
+.slider-auto11:before { content: url(/plugin/powerbutton/static/img/auto11.png); }
+.slider-auto12:before { content: url(/plugin/powerbutton/static/img/auto12.png); }
 
 
 input:checked + .slider {
@@ -94,3 +107,12 @@ input:checked + .slider:before {
   border-radius: 50%;
 }
 
+.overlay-icon {
+  float: left;
+  width: 26px;
+  height: 26px;
+  background: url(/plugin/powerbutton/static/img/auto.png);
+  left: 4px;
+  bottom: 4px;
+
+}
