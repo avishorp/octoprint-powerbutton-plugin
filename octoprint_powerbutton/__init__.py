@@ -5,6 +5,7 @@ import octoprint_powerbutton.raspi_power as raspi_power
 import time
 from octoprint_powerbutton.power_ctrl_stub import StubPowerController 
 from octoprint_powerbutton.power_states import *
+from threading import Timer, Lock
 
 ### (Don't forget to remove me)
 # This is a basic skeleton for your plugin's __init__.py. You probably want to adjust the class name of your plugin
@@ -13,6 +14,9 @@ from octoprint_powerbutton.power_states import *
 # as necessary.
 #
 # Take a look at the documentation on what other plugin mixins are available.
+
+# The state check interval in auto-power-off mode
+AUTO_POWER_OFF_INTERVAL = 10
 
 import octoprint.plugin
 
@@ -36,7 +40,8 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 				led_polarity = False,
 				button_polarity = True,
 				relay_polarity = True
-			)
+			),
+			auto_power_off = 40
 		)
 
 	##~~ AssetPlugin mixin
@@ -73,6 +78,9 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 		)
 
 	def on_after_startup(self):
+		# Create a lock for state notfication
+		self.state_notif_lock = Lock()
+
 	    # Create a Power controller module instance
 		power_module_name = self._settings.get(["power_ctrl_module"])
 		if power_module_name == "raspi_power":
@@ -84,16 +92,23 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			self._logger.error("Only raspi_power or stub power control modules are supported")
 			raise RuntimeError("Unsupported power control module")
 
+		# Holds the auto-power-off countdown
+		self.auto_power_off = None
+		self.auto_power_off_lock = Lock()
+
     ## SimpleApiPlugin
         
 	def get_api_commands(self):
 		return dict(
 				power = ['newState'],
-				refresh_state = []
+				refresh_state = [],
+				cancel_auto_off = []
 				)
 
 	def on_api_command(self, command, data):
 		if command == "power":
+			# Set the power mode (on/off)
+			#############################
 			if data["newState"] == "on":
 				new_state = POWER_STATE_ON
 			elif data["newState"] == "off":
@@ -106,7 +121,22 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			self.power_ctrl.set_power_state(new_state)
 		
 		elif command == "refresh_state":
+			# Resend the power state to the client
+			######################################
 			self.notify_power_state()
+
+		elif command == "cancel_auto_off":
+			# Cancel auto-power-off (if engaged) and set
+			# the power state to "on"
+			if (self.power_ctrl.get_power_state() == POWER_STATE_ON and self.auto_power_off > 0):
+				self.auto_power_off_lock.acquire()
+				self._logger.info("Canceling auto-power-off mode")
+				self.auto_power_off = 0
+				self.notify_power_state()
+				self.auto_power_off_lock.release()
+
+			else:
+				self._logger.warn("Auto-power-off cancel request, but not in that mode")
 
 	##
 
@@ -115,30 +145,81 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 		self.notify_power_state()
 
 	def notify_power_state(self):
+		self.state_notif_lock.acquire()
+
+		auto_off_progress = None
+
 		if (hasattr(self, 'power_ctrl')):
 			raw_power_state = self.power_ctrl.get_power_state()
 			if raw_power_state == POWER_STATE_OFF:
 				power_state = "off"
-			elif raw_power_state == POWER_STATE_ON:
-				power_state = "on"
 			elif raw_power_state == POWER_STATE_LOCKED:
 				power_state = "locked"
+			elif raw_power_state == POWER_STATE_ON:
+				power_state = "on"
 			else:
 				power_state = "unknown"
 
+			if self.auto_power_off > 0:
+				auto_off_progress = self.get_auto_power_off_time_percent()
+
 			self._plugin_manager.send_plugin_message("powerbutton", 
-				{ "powerState": power_state })
+				{ "powerState": power_state, "autoOffProgress": auto_off_progress })
+
+		self.state_notif_lock.release()
 
 	##
 
 	def on_event(self, event, payload):
 		if (event == "PrintStarted"):
 			self.power_ctrl.set_power_state(POWER_STATE_LOCKED)
-		elif (event == "PrintFailed" or event == "PrintDone"):
+		elif (event == "PrintFailed"):
 			# Get the current power state. If it's not "locked", leave
 			# it alone
 			if (self.power_ctrl.get_power_state() == POWER_STATE_LOCKED):
 				self.power_ctrl.set_power_state(POWER_STATE_ON)
+		elif (event == "PrintDone"):
+			if (self.power_ctrl.get_power_state() == POWER_STATE_LOCKED):
+
+				# If auto-power-off is enabled, set the countdown timer
+				auto_power_off_time = self._settings.get_int(["auto_power_off"])
+				if auto_power_off_time > 0:
+					# Set the auto power off countdown
+					self.auto_power_off_lock.acquire()
+					self.auto_power_off = auto_power_off_time
+					self.auto_power_off_timer = Timer(AUTO_POWER_OFF_INTERVAL, self.on_timer)
+					self.auto_power_off_timer.start()
+					self.auto_power_off_lock.release()
+
+				# Set power state to "On" (will send a notification with auto-off/on state)
+				self.power_ctrl.set_power_state(POWER_STATE_ON)
+
+
+	def on_timer(self):
+		self.auto_power_off_lock.acquire()
+
+		# Make sure wer'e still in auto-power-off mode
+		if (self.power_ctrl.get_power_state() == POWER_STATE_ON and self.auto_power_off > 0):
+			self.auto_power_off -= AUTO_POWER_OFF_INTERVAL
+
+			if self.auto_power_off <= 0:
+				self._logger.info("Auto-power-off timer expired, turning off printer")
+				self._printer.disconnect()
+				self.auto_power_off = 0
+				self.power_ctrl.set_power_state(POWER_STATE_OFF)
+			else:
+				# Re-arm the timer
+				self.auto_power_off_timer = Timer(AUTO_POWER_OFF_INTERVAL, self.on_timer)
+				self.auto_power_off_timer.start()
+
+		self.notify_power_state()
+		self.auto_power_off_lock.release()
+
+	def get_auto_power_off_time_percent(self):
+		# Return the current auto-power-off timer state as percent
+		auto_power_off_time = self._settings.get_int(["auto_power_off"])
+		return self.auto_power_off*100/auto_power_off_time
+
 
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py

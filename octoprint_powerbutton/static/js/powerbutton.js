@@ -14,7 +14,6 @@ $(function() {
 	var STATE_ON_PENDING = 'on_pending'    // Power-on command pending
 	var STATE_OFF_PENDING = 'off_pending'  // Power-off command pending
 	var STATE_ON_LOCKED = 'on_locked'      // Powered on and locked
-	var STATE_AUTOOFF = 'auto_off'         // Wait for auto power off
 
 	var CONNECT_BTN_TOOLTIP = "To connect to the printer, first turn its power on"
 
@@ -23,7 +22,7 @@ $(function() {
 
 	// Helper function - Convert a progress range of 0 - 100 to 0 to 12
 	// Used for showing a progress bar for auto-off function
-	function autoProgress(progress) {
+	function calcAutoOffProgressIndicator(progress) {
 		if (progress >= 100)
 			return 12;
 		if (progress <= 0)
@@ -37,21 +36,10 @@ $(function() {
 
     function PowerbuttonViewModel(parameters) {
         var self = this;
-/* Test */
-var p = 100;
-setTimeout(() => {
-	setInterval(() => {  
-		console.log(p)
-	 self.autoPowerOffProgress(p)
-	 p -= 10
-	 if (p < 0) p = 100;
-	}, 1000)
-	
-}, 3000)
 
 		self.printerStateViewModel = parameters[0];
 		self.switchState = ko.observable(STATE_UNKNOWN)
-		self.autoPowerOffProgress = ko.observable(0)
+		self.autoPowerOffProgress = ko.observable(null)
 
 		self.checked = ko.pureComputed(function() {
 			var state = self.switchState()
@@ -63,6 +51,7 @@ setTimeout(() => {
 
 			return (state === STATE_OFF_PENDING || state === STATE_ON_PENDING || state === STATE_ON_LOCKED)
 		}, self)
+
 		self.cssOption = ko.pureComputed(function() {
 			var state = self.switchState()
 			var progress = self.autoPowerOffProgress()
@@ -71,8 +60,14 @@ setTimeout(() => {
 				return 'slider-wait'
 			else if (state === STATE_ON_LOCKED)
 				return 'slider-lock'
-			else
-				return 'slider-auto' + autoProgress(progress)
+			else {
+				if (progress)
+					// Auto-off
+					return 'slider-auto' + calcAutoOffProgressIndicator(progress)
+				else
+					// On
+					return ''
+			}
 		}, self)
 		
 		self.visible = ko.pureComputed(function() {
@@ -87,7 +82,6 @@ setTimeout(() => {
 				else
 					e.title = ''
 			})
-
 		}
 
 		// Subscribe to switch changes (clicks)
@@ -125,7 +119,26 @@ setTimeout(() => {
 				})
 			})			
 		})
-	
+
+		// Install a click handler on the power button, to alter
+		// the button behavior when in auto-off mode
+		$('#power-button-slider').click(function(e) {
+			if (self.autoPowerOffProgress()) {
+				// In auto-off mode, clicking the power button cancels the
+				// mode and does not cause the switch to toggle.
+				e.preventDefault();
+
+				// Issue a request to cancel auto-power-off
+				OctoPrint.plugins.powerbuttonplugin.requestCancelAutoOff()
+
+				// Print a notification
+				new PNotify({
+					title: "Auto-power-off Cancelled",
+					text: "The printer will not be turned off"
+				})
+			}
+		})
+
 		self.onDataUpdaterPluginMessage = function(plugin, message) {
 			if (plugin === "powerbutton") {
 
@@ -145,8 +158,14 @@ setTimeout(() => {
 				else if (message.powerState === "locked") {
 					self.switchState(STATE_ON_LOCKED)
 				}
+				else if (message.powerState === "auto_off") {
+					self.switchState(STATE_ON)
+				}
 				else
 					console.error("PowerButton plugin: Power state error")
+
+				// Update the "autoOffProgress" field
+				self.autoPowerOffProgress(message.autoOffProgress)
 			}
 		}
 
@@ -212,7 +231,17 @@ setTimeout(() => {
 				contentType: "application/json"
 			})
 		}
-	
+
+		// Request the server to cancel auto-power-off, when in effect
+		PowerButtonPluginClient.prototype.requestCancelAutoOff = function() {
+			// Issue an API request
+			OctoPrint.ajaxWithData("POST", "api/plugin/" + POWER_BUTTON_PLUGIN, JSON.stringify({
+				command: "cancel_auto_off"
+			}), {
+				contentType: "application/json"
+			})
+		}
+		
 		OctoPrintClient.registerPluginComponent("powerbuttonplugin", PowerButtonPluginClient);
 		return PowerButtonPluginClient;
 	});
