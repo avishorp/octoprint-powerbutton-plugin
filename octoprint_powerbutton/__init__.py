@@ -41,7 +41,10 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 				button_polarity = True,
 				relay_polarity = True
 			),
-			auto_power_off = 40
+			auto_power_off = dict(
+				interval = 180,
+				enabled = True
+			)
 		)
 
 	##~~ AssetPlugin mixin
@@ -54,6 +57,12 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			css=["css/powerbutton.css"],
 			less=["less/powerbutton.less"]
 			)
+
+	##~~ TemplatePlugin mixin
+	def get_template_configs(self):
+		return [
+			dict(type="settings", custom_bindings=False)
+		]
 
 	##~~ Softwareupdate hook
 
@@ -182,8 +191,9 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			if (self.power_ctrl.get_power_state() == POWER_STATE_LOCKED):
 
 				# If auto-power-off is enabled, set the countdown timer
-				auto_power_off_time = self._settings.get_int(["auto_power_off"])
-				if auto_power_off_time > 0:
+				auto_power_off_time = self._settings.get_int(["auto_power_off", "interval"])
+				auto_power_off_enabled = self._settings.get_boolean(["auto_power_off", "enabled"])
+				if auto_power_off_enabled and auto_power_off_time > 0:
 					# Set the auto power off countdown
 					self.auto_power_off_lock.acquire()
 					self.auto_power_off = auto_power_off_time
@@ -217,7 +227,7 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 
 	def get_auto_power_off_time_percent(self):
 		# Return the current auto-power-off timer state as percent
-		auto_power_off_time = self._settings.get_int(["auto_power_off"])
+		auto_power_off_time = self._settings.get_int(["auto_power_off", "interval"])
 		return self.auto_power_off*100/auto_power_off_time
 
 
