@@ -52,6 +52,10 @@ class RaspiPowerControl:
     def set_power_state(self, new_state):
         assert(new_state == POWER_STATE_ON or new_state == POWER_STATE_OFF or new_state == POWER_STATE_LOCKED)
 
+        # If state hasn't change, do nothing
+        if (new_state == self.power_state):
+            return
+
         # Set the new power state
         self.power_state = new_state
 

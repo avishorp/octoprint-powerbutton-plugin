@@ -47,7 +47,7 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			),
 			auto_connect = dict(
 				enabled = False,
-				port = "",
+				port = "xxx",
 				baud = "",
 				delay = 30,
 				profile = ""
@@ -112,6 +112,9 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 		self.auto_power_off = None
 		self.auto_power_off_lock = Lock()
 
+		# Will hold the auto connect timer
+		self.auto_connect_timer = None
+
     ## SimpleApiPlugin
         
 	def get_api_commands(self):
@@ -159,6 +162,21 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 	def on_power_state(self, new_state):
 		self._logger.info("Power state changed")
 		self.notify_power_state()
+
+		# If state has changed to "ON", and auto-connect is enabled,
+		# start a timer to do the auto-connect
+		auto_connect_enabled = self._settings.get_boolean(["auto_connect", "enabled"])
+		auto_connect_delay = self._settings.get_int(["auto_connect", "delay"])
+		if (new_state == POWER_STATE_ON and auto_connect_enabled == True and auto_connect_delay > 0):
+			# Create a timer to perform the auto-connect
+			self.auto_connect_timer = Timer(auto_connect_delay, self.on_auto_connect_timer)
+			self.auto_connect_timer.start()
+
+		# If te state has changed to "OFF" and an auto-connect timer is pending,
+		# cancel it
+		if (new_state == POWER_STATE_OFF and hasattr(self, "auto_connect_timer") and self.auto_connect_timer is not None):
+			self.auto_connect_timer.cancel()
+
 
 	def notify_power_state(self):
 		self.state_notif_lock.acquire()
@@ -237,7 +255,19 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 		auto_power_off_time = self._settings.get_int(["auto_power_off", "interval"])
 		return self.auto_power_off*100/auto_power_off_time
 
+	def on_auto_connect_timer(self):
+		self._logger.info("Trying auto-connect")
+		
+		# Extract settings
+		str_or_none = lambda s: None if s == "" else s
+		port = str_or_none(self._settings.get(["auto_connect", "port"]))
+		baud = str_or_none(self._settings.get(["auto_connect", "baud"]))
+		profile = str_or_none(self._settings.get(["auto_connect", "profile"]))
 
+		# Connect if not already connected
+		conn_state, _, _, _ = self._printer.get_current_connection()
+		if (conn_state == 'Closed'):
+			self._printer.connect(port = port, baudrate = baud, profile = profile)
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
 # ("OctoPrint-PluginSkeleton"), you may define that here. Same goes for the other metadata derived from setup.py that
