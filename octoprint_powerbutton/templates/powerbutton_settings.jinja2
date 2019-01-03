@@ -1,9 +1,25 @@
 <form class="form-horizontal">
   <div class="control-group">
-    <label class="control-label">Enable Auto Power Off</label>
+    <h4>Auto Power Off</h4>
+    <label class="control-label">Enable</label>
     <div class="controls"><input type="checkbox" class="input-block-level" data-bind="checked: settings.plugins.powerbutton.auto_power_off.enabled"/></div>
-    <label class="control-label">Auto Power Off Time</label>
+    <label class="control-label">Power Off Delay</label>
     <div class="controls"><input type="text" class="input-block-level" style="width: 150px" data-bind="value: settings.plugins.powerbutton.auto_power_off.interval"/> seconds</div>
 
+    <h4>Auto Connect</h4>
+    <label class="control-label">Enable</label>
+    <div class="controls" style="padding-bottom: 5px"><input type="checkbox" class="input-block-level" data-bind="checked: settings.plugins.powerbutton.auto_connect.enabled"/></div>
+    <label class="control-label">Serial Port</label>
+    <div class="controls" style="padding-bottom: 5px"><input id="powerbutton-port" type="text" class="input-block-level" style="width: 150px" data-bind="value: settings.plugins.powerbutton.auto_power_off.port"/></div>
+    <label class="control-label">Baud Rate</label>
+    <div class="controls"style="padding-bottom: 5px"><input type="text" class="input-block-level" style="width: 150px" data-bind="value: settings.plugins.powerbutton.auto_power_off.baud"/></div>
+    <label class="control-label">Profile</label>
+    <div class="controls"style="padding-bottom: 5px"><input type="text" class="input-block-level" style="width: 150px" data-bind="value: settings.plugins.powerbutton.auto_power_off.profile"/></div>
+    <label class="control-label">Delay</label>
+    <div class="controls"><input type="text" class="input-block-level" style="width: 150px" data-bind="value: settings.plugins.powerbutton.auto_power_off.delay"/> seconds</div>
+<!--
+    <label class="control-label"></label>
+    <button class="btn btn-primary btn-block" style="margin-top: 18px; margin-left: 50px; width: 180px" data-bind="click: function() { $('#powerbutton-port').val('abc'); }">Copy Current Settings</button>
+    -->
   </div>
 </form>

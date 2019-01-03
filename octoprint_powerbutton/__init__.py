@@ -44,6 +44,13 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			auto_power_off = dict(
 				interval = 180,
 				enabled = True
+			),
+			auto_connect = dict(
+				enabled = False,
+				port = "",
+				baud = "",
+				delay = 30,
+				profile = ""
 			)
 		)
 
