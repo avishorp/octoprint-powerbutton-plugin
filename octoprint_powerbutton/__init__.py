@@ -7,14 +7,6 @@ from octoprint_powerbutton.power_ctrl_stub import StubPowerController
 from octoprint_powerbutton.power_states import *
 from threading import Timer, Lock
 
-### (Don't forget to remove me)
-# This is a basic skeleton for your plugin's __init__.py. You probably want to adjust the class name of your plugin
-# as well as the plugin mixins it's subclassing from. This is really just a basic skeleton to get you started,
-# defining your plugin as a template plugin, settings and asset plugin. Feel free to add or remove mixins
-# as necessary.
-#
-# Take a look at the documentation on what other plugin mixins are available.
-
 # The state check interval in auto-power-off mode
 AUTO_POWER_OFF_INTERVAL = 10
 
@@ -47,7 +39,7 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			),
 			auto_connect = dict(
 				enabled = False,
-				port = "xxx",
+				port = "",
 				baud = "",
 				delay = 30,
 				profile = ""
