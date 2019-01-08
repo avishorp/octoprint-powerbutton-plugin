@@ -35,6 +35,7 @@ class RaspiPowerControl:
         self.__setup_GPIO()
 
         # Set the initial power state to OFF
+        self.power_state = None
         self.set_power_state(POWER_STATE_OFF)
 
         # Start the button thread
