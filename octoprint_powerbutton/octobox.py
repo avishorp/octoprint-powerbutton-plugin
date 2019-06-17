@@ -131,6 +131,7 @@ class Octobox:
 
         self.running = True
         self.bg = Thread(target = self.__button_thread)
+        self.bg.daemon = True
         self.bg.start()
 
     def stop(self):
@@ -231,20 +232,20 @@ def handle_btn(v):
 def handle_drop():
     print "drop"
 
-ob = Octobox()
-ob.subscribe_button_press(handle_btn)
-ob.subscribe_drop(handle_drop)
+# ob = Octobox()
+# ob.subscribe_button_press(handle_btn)
+# ob.subscribe_drop(handle_drop)
 
-ob.set_led_pattern(PATT_LED_NONE)
-time.sleep(5)
-ob.set_led_pattern(PATT_LED_RED)
-time.sleep(3)
-ob.set_led_pattern(PATT_LED_GREEN)
-time.sleep(3)
-ob.set_led_pattern(PATT_LED_YELLOW)
-time.sleep(3)
-ob.set_led_pattern(PATT_LED_RED_BLINK)
-time.sleep(3)
-ob.stop()
+# ob.set_led_pattern(PATT_LED_NONE)
+# time.sleep(5)
+# ob.set_led_pattern(PATT_LED_RED)
+# time.sleep(3)
+# ob.set_led_pattern(PATT_LED_GREEN)
+# time.sleep(3)
+# ob.set_led_pattern(PATT_LED_YELLOW)
+# time.sleep(3)
+# ob.set_led_pattern(PATT_LED_RED_BLINK)
+# time.sleep(3)
+# ob.stop()
 
 
