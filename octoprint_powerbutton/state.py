@@ -6,11 +6,30 @@ POWER_STATE_AUTOOFF = 2
 POWER_STATE_LOCKED = 3
 POWER_STATE_DROPPED = 4
 
+def action_web_toggle(old_state, value):
+    print(value)
+    if value == 'on' and old_state["power_state"] == POWER_STATE_OFF:
+        old_state["power_state"] = POWER_STATE_ON
+    elif value == 'off' and (old_state["power_state"] == POWER_STATE_ON or old_state["power_state"] == POWER_STATE_AUTOOFF):
+        old_state["power_state"] = POWER_STATE_OFF
+    
+    return old_state
+
 
 class PowerbuttonState:
 
     def __init__(self, logger = None):
         self.logger = logger
+
+        self.state = dict(
+            power_state = POWER_STATE_OFF,
+            auto_power_off_countdown = 0,
+            auto_connect_countdown = 0
+        )
+
+        self.actions = {
+            'web_toggle': action_web_toggle
+        }
 
         self.power_state = POWER_STATE_OFF
         self.auto_power_off_countdown = 0
@@ -26,11 +45,24 @@ class PowerbuttonState:
         handler(self.get_state(), None)
 
     def get_state(self):
-        return dict(
-            power_state = self.power_state,
-            auto_power_off_countdown = self.auto_power_off_countdown,
-            auto_connect_countdown = self.auto_connect_countdown
-        )
+        return self.state
+
+    def dispatch(self, action, *args):
+        print("Dispatch: " + action)
+        # Copy the old (current) state to a new variabel
+        #old_state = self.state.copy()
+
+        # Determine the action function to call
+        faction = self.actions[action]
+
+        # Invoke the action
+        working_state = self.state.copy()
+        old_state = self.state
+        self.state = faction(working_state, *args)
+
+        # Call all handlers
+        for handler in self.subscribers:
+            handler(self.state, old_state)
 
 
     def action_button_press(self, long_press):

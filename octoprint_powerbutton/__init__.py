@@ -4,13 +4,22 @@ import flask
 import time
 from threading import Timer, Lock
 
-from octoprint_powerbutton.state import PowerbuttonState
+from octoprint_powerbutton.state import *
 from octoprint_powerbutton.octobox import Octobox
 
 # The state check interval in auto-power-off mode
 AUTO_POWER_OFF_INTERVAL = 10
 
 import octoprint.plugin
+
+power_state_codes = {
+	POWER_STATE_OFF: "off",
+	POWER_STATE_ON: "on",
+	POWER_STATE_AUTOOFF: "autoOff",
+	POWER_STATE_LOCKED: "lock",
+	POWER_STATE_DROPPED: "drop"
+}
+
 
 class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
                         octoprint.plugin.AssetPlugin,
@@ -89,6 +98,13 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 
 		self._logger.info("Startup completed")
 
+		self.state_mgr.subscribe(self.state_log)
+		self.state_mgr.subscribe(self.notify_power_state)
+
+	def state_log(self, new_state, old_state):
+		print(new_state)
+		print(old_state)
+
 	def on_shutdown(self):
 		self._logger.info("Shutting down")
 		self.octobox.stop()
@@ -108,18 +124,14 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			# Set the power mode (on/off)
 			#############################
 			if data["newState"] == "on" or data["newState"] == "off":
-				self.state_mgr.action_web_toggle(data["newState"])
+				self.state_mgr.dispatch('web_toggle', data["newState"])
 			else:
 				return flask.make_response("Illegal power state parameter", 400)
-
-			#time.sleep(5)  # For testing
-			self._logger.info("Setting power to %s", "On" if new_state else "Off")
-			self.power_ctrl.set_power_state(new_state)
-		
+	
 		elif command == "refresh_state":
 			# Resend the power state to the client
 			######################################
-			self.notify_power_state()
+			self.notify_power_state(self.state_mgr.get_state(), None)
 
 		elif command == "cancel_auto_off":
 			# Cancel auto-power-off (if engaged) and set
@@ -156,9 +168,9 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 	# 		self.auto_connect_timer.cancel()
 
 
-	def notify_power_state(self):
+	def notify_power_state(self, new_state, old_state):
 		self._plugin_manager.send_plugin_message("powerbutton", 
-			{ "powerState": "on", "autoOffProgress": 0 })
+			{ "powerState": power_state_codes[new_state["power_state"]], "autoOffProgress": 0 })
 
 	# 	self.state_notif_lock.acquire()
 
