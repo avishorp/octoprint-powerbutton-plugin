@@ -5,7 +5,7 @@ import time
 from threading import Timer, Lock
 
 from octoprint_powerbutton.state import *
-from octoprint_powerbutton.octobox import Octobox
+from octoprint_powerbutton.octobox import *
 
 # The state check interval in auto-power-off mode
 AUTO_POWER_OFF_INTERVAL = 10
@@ -98,8 +98,15 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 
 		self._logger.info("Startup completed")
 
+		# Connect the state change notifications to all consumers
 		self.state_mgr.subscribe(self.state_log)
 		self.state_mgr.subscribe(self.notify_power_state)
+		self.state_mgr.subscribe(self.relay_ctrl)
+		self.state_mgr.subscribe(self.led_ctrl)
+
+		self.octobox.subscribe_button_press(self.handle_button_press)
+		self.octobox.subscribe_drop(self.handle_drop)
+
 
 	def state_log(self, new_state, old_state):
 		print(new_state)
@@ -171,6 +178,41 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 	def notify_power_state(self, new_state, old_state):
 		self._plugin_manager.send_plugin_message("powerbutton", 
 			{ "powerState": power_state_codes[new_state["power_state"]], "autoOffProgress": 0 })
+
+	def relay_ctrl(self, new_state, old_state):
+		p = new_state["power_state"]
+		if old_state is None or (p != old_state["power_state"]):
+			if p == POWER_STATE_ON or p == POWER_STATE_AUTOOFF or p == POWER_STATE_LOCKED:
+				self.octobox.set_relay(True)
+			else:
+				self.octobox.set_relay(False)
+
+	def led_ctrl(self, new_state, old_state):
+		p = new_state["power_state"]
+		if old_state is None or (p != old_state["power_state"]):
+			if p ==	POWER_STATE_OFF:
+				pattern = PATT_LED_RED
+			elif p == POWER_STATE_ON:
+				pattern = PATT_LED_GREEN
+			elif p == POWER_STATE_LOCKED:
+				pattern = PATT_LED_YELLOW
+			elif p == POWER_STATE_AUTOOFF:
+				patten = PATT_LED_GREEN_RED
+			else:
+				# Drop
+				pattern = PATT_LED_RED_BLINK
+
+			self.octobox.set_led_pattern(pattern)
+
+	def handle_button_press(self, short):
+		if short:
+			self.state_mgr.dispatch('btn_short')
+		else:
+			self.state_mgr.dispatch('btn_long')
+
+	def handle_drop(self):
+		print("droooooooooooooooooooooooooooooooop")
+		self.state_mgr.dispatch('drop')
 
 	# 	self.state_notif_lock.acquire()
 

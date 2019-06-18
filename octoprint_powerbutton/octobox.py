@@ -19,6 +19,7 @@ PATT_LED_RED = 1       # Solid Red
 PATT_LED_GREEN = 2     # Solid Green
 PATT_LED_YELLOW = 3    # Solid Yellow
 PATT_LED_RED_BLINK = 4 # Blinking Red
+PATT_LED_GREEN_RED = 5 # Green, with short red blinks
 
 # Button press period
 SHORT_PERIOD = 15  # Short press
@@ -127,6 +128,7 @@ class Octobox:
         self.hw = OctoboxHardware()
         self.button_press_callback = None
         self.drop_callback = None
+        self.drop_indicated = False
         self.blink_pattern = None
 
         self.running = True
@@ -164,6 +166,7 @@ class Octobox:
         a power drop event has occured.
         """
         self.drop_callback = handler
+        self.drop_indicated = False
 
     def set_relay(self, value):
         """
@@ -222,6 +225,11 @@ class Octobox:
                     self.hw.set_led(False, False, False)
                 else:
                     self.hw.set_led(True, False, False)
+
+            # Drop indication
+            if (self.drop_callback is not None) and (not self.drop_indicated) and (self.hw.get_drop()):
+                self.drop_indicated = True
+                self.drop_callback()
 
             time.sleep(0.05)
 

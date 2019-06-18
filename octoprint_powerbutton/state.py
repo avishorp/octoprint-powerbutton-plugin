@@ -6,8 +6,15 @@ POWER_STATE_AUTOOFF = 2
 POWER_STATE_LOCKED = 3
 POWER_STATE_DROPPED = 4
 
+def assign(d, **mods):
+    """
+    Returns a new dictionary which comprises of a copy of a dictionary and modifications of additions
+    """
+    r = d.copy()
+    r.update(**mods)
+    return r
+
 def action_web_toggle(old_state, value):
-    print(value)
     if value == 'on' and old_state["power_state"] == POWER_STATE_OFF:
         old_state["power_state"] = POWER_STATE_ON
     elif value == 'off' and (old_state["power_state"] == POWER_STATE_ON or old_state["power_state"] == POWER_STATE_AUTOOFF):
@@ -15,6 +22,31 @@ def action_web_toggle(old_state, value):
     
     return old_state
 
+def action_button_short(old_state):
+    p = old_state["power_state"]
+    if p == POWER_STATE_OFF:
+        # When off, turn the power on
+        return assign(old_state, power_state=POWER_STATE_ON)
+    elif p == POWER_STATE_ON:
+        # When on, turn the power off
+        return assign(old_state, power_state=POWER_STATE_OFF)
+    elif p == POWER_STATE_AUTOOFF:
+        # Canecl auto-off
+        return assign(old_state, power_state=POWER_STATE_ON)
+    else:
+        return old_state
+
+def action_button_long(old_state):
+    p = old_state["power_state"]
+    if p == POWER_STATE_OFF:
+        return assign(old_state, power_state=POWER_STATE_ON)
+    elif p == POWER_STATE_ON or p == POWER_STATE_LOCKED or p == POWER_STATE_AUTOOFF:
+        return assign(old_state, power_state=POWER_STATE_OFF)
+    else:
+        return old_state
+
+def action_drop(old_state):
+    return assign(old_state, power_state=POWER_STATE_DROPPED)
 
 class PowerbuttonState:
 
@@ -28,7 +60,10 @@ class PowerbuttonState:
         )
 
         self.actions = {
-            'web_toggle': action_web_toggle
+            'web_toggle': action_web_toggle,
+            'btn_short': action_button_short,
+            'btn_long': action_button_long,
+            'drop': action_drop
         }
 
         self.power_state = POWER_STATE_OFF
@@ -48,10 +83,6 @@ class PowerbuttonState:
         return self.state
 
     def dispatch(self, action, *args):
-        print("Dispatch: " + action)
-        # Copy the old (current) state to a new variabel
-        #old_state = self.state.copy()
-
         # Determine the action function to call
         faction = self.actions[action]
 
