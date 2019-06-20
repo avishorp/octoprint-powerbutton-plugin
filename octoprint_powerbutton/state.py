@@ -1,5 +1,5 @@
 
-from threading import Timer
+from threading import Timer, Lock
 
 # Power states
 POWER_STATE_OFF = 0
@@ -81,6 +81,7 @@ class PowerbuttonState:
 
     def __init__(self, logger = None):
         self.logger = logger
+        self.dispatch_lock = Lock()
 
         self.state = dict(
             power_state = POWER_STATE_OFF,
@@ -125,6 +126,8 @@ class PowerbuttonState:
         return self.state
 
     def dispatch(self, action, *args):
+        self.dispatch_lock.acquire()
+
         print "Dispatch: " + action
 
         # Determine the action function to call
@@ -138,6 +141,8 @@ class PowerbuttonState:
         # Call all handlers
         for handler in self.subscribers:
             handler(self.state, old_state)
+
+        self.dispatch_lock.release()
 
     def time_action_timer_func(self):
         if self.state["auto_power_off_countdown"] > 0:
