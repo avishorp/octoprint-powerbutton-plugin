@@ -146,18 +146,7 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			self.notify_power_state(self.state_mgr.get_state(), None)
 
 		elif command == "cancel_auto_off":
-			# Cancel auto-power-off (if engaged) and set
-			# the power state to "on"
-			#if (self.power_ctrl.get_power_state() == POWER_STATE_ON and self.auto_power_off > 0):
-			#	self.auto_power_off_lock.acquire()
-			#	self._logger.info("Canceling auto-power-off mode")
-			#	self.auto_power_off = 0
-			#	self.notify_power_state()
-			#	self.auto_power_off_lock.release()
-
-			#else:
-			#	self._logger.warn("Auto-power-off cancel request, but not in that mode")
-			pass
+			self.state_mgr.dispatch("cancel_auto_off")
 
 	##
 
@@ -219,11 +208,11 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 
 			self.octobox.set_led_pattern(pattern)
 
-	def handle_button_press(self, short):
-		if short:
-			self.state_mgr.dispatch('btn_short')
-		else:
+	def handle_button_press(self, long_press):
+		if long_press:
 			self.state_mgr.dispatch('btn_long')
+		else:
+			self.state_mgr.dispatch('btn_short')
 
 	def handle_drop(self):
 		self.state_mgr.dispatch('drop')

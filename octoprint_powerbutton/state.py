@@ -34,7 +34,7 @@ def action_button_short(old_state):
         return assign(old_state, power_state=POWER_STATE_OFF)
     elif p == POWER_STATE_AUTOOFF:
         # Canecl auto-off
-        return assign(old_state, power_state=POWER_STATE_ON)
+        return assign(old_state, power_state=POWER_STATE_ON, auto_power_off_countdown=0)
     else:
         return old_state
 
@@ -43,7 +43,7 @@ def action_button_long(old_state):
     if p == POWER_STATE_OFF:
         return assign(old_state, power_state=POWER_STATE_ON)
     elif p == POWER_STATE_ON or p == POWER_STATE_LOCKED or p == POWER_STATE_AUTOOFF:
-        return assign(old_state, power_state=POWER_STATE_OFF)
+        return assign(old_state, power_state=POWER_STATE_OFF, auto_power_off_countdown=0)
     else:
         return old_state
 
@@ -71,6 +71,12 @@ def action_update_auto_off(old_state, value):
     else:
         return assign(old_state, auto_power_off_countdown=value)
 
+def action_cancel_auto_off(old_state):
+    if old_state["power_state"] == POWER_STATE_AUTOOFF:
+        return assign(old_state, power_state=POWER_STATE_ON, auto_power_off_countdown=0)
+    else:
+        return old_state
+
 class PowerbuttonState:
 
     def __init__(self, logger = None):
@@ -90,7 +96,8 @@ class PowerbuttonState:
             'print_started': action_print_started,
             'print_failed': action_print_failed,
             'print_done': action_print_done,
-            'update_auto_off': action_update_auto_off
+            'update_auto_off': action_update_auto_off,
+            'cancel_auto_off': action_cancel_auto_off
         }
 
         self.power_state = POWER_STATE_OFF
@@ -118,6 +125,8 @@ class PowerbuttonState:
         return self.state
 
     def dispatch(self, action, *args):
+        print "Dispatch: " + action
+
         # Determine the action function to call
         faction = self.actions[action]
 
