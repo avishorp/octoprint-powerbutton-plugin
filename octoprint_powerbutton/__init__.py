@@ -101,6 +101,7 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 		# Connect the state change notifications to all consumers
 		self.state_mgr.subscribe(self.state_log)
 		self.state_mgr.subscribe(self.notify_power_state)
+		self.state_mgr.subscribe(self.auto_connect_ctrl)
 		self.state_mgr.subscribe(self.relay_ctrl)
 		self.state_mgr.subscribe(self.led_ctrl)
 
@@ -116,6 +117,10 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 		self._logger.info("Shutting down")
 		self.octobox.stop()
 		self.state_mgr.stop()
+		if self.auto_connect_timer is not None:
+			self.auto_connect_timer.cancel()
+			self.auto_connect_timer = None
+
 
     ## SimpleApiPlugin
         
@@ -208,6 +213,32 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 
 			self.octobox.set_led_pattern(pattern)
 
+	def auto_connect_ctrl(self, new_state, old_state):
+		if old_state is None:
+			return
+
+		old_ps = old_state["power_state"]
+		new_ps = new_state["power_state"]
+
+		if old_ps == POWER_STATE_OFF and new_ps == POWER_STATE_ON:
+			# Start auto-connect timer if enabled
+			auto_connect_enabled = self._settings.get_boolean(["auto_connect", "enabled"])
+			auto_connect_delay = self._settings.get_int(["auto_connect", "delay"])
+
+			if auto_connect_enabled:
+				self.auto_connect_timer = Timer(auto_connect_delay, self.on_auto_connect_timer)
+				self.auto_connect_timer.start()
+
+		elif (old_ps == POWER_STATE_AUTOOFF or old_ps == POWER_STATE_LOCKED or old_ps == POWER_STATE_ON) and new_ps == POWER_STATE_OFF:
+			# Disconnect printer befor turning off the power
+			self._printer.disconnect()
+
+			# Cancel the auto-connect timer, if enabled
+			if self.auto_connect_timer is not None:
+				self.auto_connect_timer.cancel()
+				self.auto_connect_timer = None
+
+
 	def handle_button_press(self, long_press):
 		if long_press:
 			self.state_mgr.dispatch('btn_long')
@@ -216,6 +247,8 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 
 	def handle_drop(self):
 		self.state_mgr.dispatch('drop')
+
+		
 
 	# 	self.state_notif_lock.acquire()
 
@@ -303,19 +336,26 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 	# 	auto_power_off_time = self._settings.get_int(["auto_power_off", "interval"])
 	# 	return self.auto_power_off*100/auto_power_off_time
 
-	# def on_auto_connect_timer(self):
-	# 	self._logger.info("Trying auto-connect")
+	def on_auto_connect_timer(self):
+		if self.state_mgr.get_state()["power_state"] != POWER_STATE_ON:
+			# Incorrect state, ignore
+			self._logger.info("Auto-connect cancelled, inappropriate state")
+			return
+	 	
+		self._logger.info("Trying auto-connect")
 		
-	# 	# Extract settings
-	# 	str_or_none = lambda s: None if s == "" else s
-	# 	port = str_or_none(self._settings.get(["auto_connect", "port"]))
-	# 	baud = str_or_none(self._settings.get(["auto_connect", "baud"]))
-	# 	profile = str_or_none(self._settings.get(["auto_connect", "profile"]))
+	 	# Extract settings
+	 	str_or_none = lambda s: None if s == "" else s
+	 	port = str_or_none(self._settings.get(["auto_connect", "port"]))
+	 	baud = str_or_none(self._settings.get(["auto_connect", "baud"]))
+	 	profile = str_or_none(self._settings.get(["auto_connect", "profile"]))
 
-	# 	# Connect if not already connected
-	# 	conn_state, _, _, _ = self._printer.get_current_connection()
-	# 	if (conn_state == 'Closed'):
-	# 		self._printer.connect(port = port, baudrate = baud, profile = profile)
+	 	# Connect if not already connected
+	 	conn_state, _, _, _ = self._printer.get_current_connection()
+	 	if (conn_state == 'Closed'):
+	 		self._printer.connect(port = port, baudrate = baud, profile = profile)
+
+		self.auto_connect_timer = None
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
 # ("OctoPrint-PluginSkeleton"), you may define that here. Same goes for the other metadata derived from setup.py that
