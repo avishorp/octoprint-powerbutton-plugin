@@ -15,8 +15,8 @@ import octoprint.plugin
 power_state_codes = {
 	POWER_STATE_OFF: "off",
 	POWER_STATE_ON: "on",
-	POWER_STATE_AUTOOFF: "autoOff",
-	POWER_STATE_LOCKED: "lock",
+	POWER_STATE_AUTOOFF: "auto_off",
+	POWER_STATE_LOCKED: "locked",
 	POWER_STATE_DROPPED: "drop"
 }
 
@@ -115,6 +115,7 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 	def on_shutdown(self):
 		self._logger.info("Shutting down")
 		self.octobox.stop()
+		self.state_mgr.stop()
 
     ## SimpleApiPlugin
         
@@ -127,6 +128,10 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 
 	def on_api_command(self, command, data):
 		self._logger.info(command)
+		if not hasattr(self, 'state_mgr'):
+			# Not initialized yet!
+			return
+
 		if command == "power":
 			# Set the power mode (on/off)
 			#############################
@@ -176,8 +181,18 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 
 
 	def notify_power_state(self, new_state, old_state):
+		if new_state["power_state"] == POWER_STATE_AUTOOFF:
+			auto_power_off_countdown = new_state["auto_power_off_countdown"]
+
+			# Calculate as percent
+			auto_power_off_interval = self._settings.get_int(["auto_power_off", "interval"])
+			auto_power_off_countdown = int(auto_power_off_countdown*100.0/auto_power_off_interval)
+
+		else:
+			auto_power_off_countdown = 0
+
 		self._plugin_manager.send_plugin_message("powerbutton", 
-			{ "powerState": power_state_codes[new_state["power_state"]], "autoOffProgress": 0 })
+			{ "powerState": power_state_codes[new_state["power_state"]], "autoOffProgress": auto_power_off_countdown })
 
 	def relay_ctrl(self, new_state, old_state):
 		p = new_state["power_state"]
@@ -197,7 +212,7 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			elif p == POWER_STATE_LOCKED:
 				pattern = PATT_LED_YELLOW
 			elif p == POWER_STATE_AUTOOFF:
-				patten = PATT_LED_GREEN_RED
+				pattern = PATT_LED_GREEN_BLINK
 			else:
 				# Drop
 				pattern = PATT_LED_RED_BLINK
@@ -211,7 +226,6 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 			self.state_mgr.dispatch('btn_long')
 
 	def handle_drop(self):
-		print("droooooooooooooooooooooooooooooooop")
 		self.state_mgr.dispatch('drop')
 
 	# 	self.state_notif_lock.acquire()
@@ -240,7 +254,16 @@ class PowerbuttonPlugin(octoprint.plugin.SettingsPlugin,
 	# ##
 
 	def on_event(self, event, payload):
-		pass
+		if event == "PrintStarted":
+			self.state_mgr.dispatch("print_started")
+		elif event == "PrintFailed":
+			self.state_mgr.dispatch("print_failed")
+		elif event == "PrintDone":
+			auto_power_off_countdown = self._settings.get_int(["auto_power_off", "interval"])
+			auto_power_off_enabled = self._settings.get_int(["auto_power_off", "enabled"])
+
+			self.state_mgr.dispatch("print_done", auto_power_off_countdown, auto_power_off_enabled)
+
 	# 	if (event == "PrintStarted"):
 	# 		self.power_ctrl.set_power_state(POWER_STATE_LOCKED)
 	# 	elif (event == "PrintFailed"):

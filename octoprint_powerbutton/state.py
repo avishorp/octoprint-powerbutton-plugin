@@ -1,4 +1,6 @@
 
+from threading import Timer
+
 # Power states
 POWER_STATE_OFF = 0
 POWER_STATE_ON = 1
@@ -48,6 +50,27 @@ def action_button_long(old_state):
 def action_drop(old_state):
     return assign(old_state, power_state=POWER_STATE_DROPPED)
 
+def action_print_started(old_state):
+    return assign(old_state, power_state=POWER_STATE_LOCKED)
+
+def action_print_failed(old_state):
+    return assign(old_state, power_state=POWER_STATE_ON)
+
+def action_print_done(old_state, auto_power_off_countdown, auto_power_off_enabled):
+    if auto_power_off_enabled:
+        return assign(old_state, 
+            power_state=POWER_STATE_AUTOOFF, 
+            auto_power_off_countdown=auto_power_off_countdown)
+    else:
+        return assign(old_state, power_state=POWER_STATE_ON)
+
+def action_update_auto_off(old_state, value):
+    if value == 0:
+        # Countdown done - turn off
+        return assign(old_state, power_state=POWER_STATE_OFF, auto_power_off_countdown=0)
+    else:
+        return assign(old_state, auto_power_off_countdown=value)
+
 class PowerbuttonState:
 
     def __init__(self, logger = None):
@@ -63,7 +86,11 @@ class PowerbuttonState:
             'web_toggle': action_web_toggle,
             'btn_short': action_button_short,
             'btn_long': action_button_long,
-            'drop': action_drop
+            'drop': action_drop,
+            'print_started': action_print_started,
+            'print_failed': action_print_failed,
+            'print_done': action_print_done,
+            'update_auto_off': action_update_auto_off
         }
 
         self.power_state = POWER_STATE_OFF
@@ -71,6 +98,14 @@ class PowerbuttonState:
         self.auto_connect_countdown = 0
 
         self.subscribers = []
+
+        # Start a thread to handle time-based actions
+        self.time_action_timer = Timer(1, self.time_action_timer_func)
+        self.time_action_timer.start()
+
+    def stop(self):
+        self.time_action_timer.cancel()
+
 
     def subscribe(self, handler):
         # Add the handler function to the subscriber list
@@ -95,24 +130,13 @@ class PowerbuttonState:
         for handler in self.subscribers:
             handler(self.state, old_state)
 
+    def time_action_timer_func(self):
+        if self.state["auto_power_off_countdown"] > 0:
+            self.dispatch("update_auto_off", self.state["auto_power_off_countdown"] - 1)
 
-    def action_button_press(self, long_press):
-        pass
-
-    def action_web_toggle(self, value):
-        pass
-
-    def action_web_cancel_auto_off(self):
-        pass
-
-    def action_print_started(self):
-        pass
-
-    def action_print_failed(self):
-        pass
-
-    def action_print_done(self):
-        pass
+        # Re-arm
+        self.time_action_timer = Timer(1, self.time_action_timer_func)
+        self.time_action_timer.start()
 
 
 

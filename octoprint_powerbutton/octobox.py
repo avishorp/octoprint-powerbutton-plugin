@@ -14,12 +14,12 @@ GPIO_LED_G = 22
 GPIO_LED_B = 27
 
 # LED Patterns
-PATT_LED_NONE = 0      # LED turned off
-PATT_LED_RED = 1       # Solid Red
-PATT_LED_GREEN = 2     # Solid Green
-PATT_LED_YELLOW = 3    # Solid Yellow
-PATT_LED_RED_BLINK = 4 # Blinking Red
-PATT_LED_GREEN_RED = 5 # Green, with short red blinks
+PATT_LED_NONE = 0        # LED turned off
+PATT_LED_RED = 1         # Solid Red
+PATT_LED_GREEN = 2       # Solid Green
+PATT_LED_YELLOW = 3      # Solid Yellow
+PATT_LED_RED_BLINK = 4   # Blinking Red
+PATT_LED_GREEN_BLINK = 5 # Green, with short red blinks
 
 # Button press period
 SHORT_PERIOD = 15  # Short press
@@ -129,7 +129,8 @@ class Octobox:
         self.button_press_callback = None
         self.drop_callback = None
         self.drop_indicated = False
-        self.blink_pattern = None
+
+        self.set_led_pattern(PATT_LED_NONE)
 
         self.running = True
         self.bg = Thread(target = self.__button_thread)
@@ -180,20 +181,17 @@ class Octobox:
 
         The pat argument is any of the PATT_LED_* constants
         """
-        if pat == PATT_LED_RED_BLINK:
-            self.blink_pattern = True
+        self.led_pattern = pat
 
-        else:
-            self.blink_pattern = False
-
-            if pat == PATT_LED_NONE:
-                self.hw.set_led(False, False, False)
-            elif pat == PATT_LED_RED:
-                self.hw.set_led(True, False, False)
-            elif pat == PATT_LED_GREEN:
-                self.hw.set_led(False, True, False)
-            else:
-                self.hw.set_led(True, True, False)
+        # Apply constant patterns
+        if pat == PATT_LED_NONE:
+            self.hw.set_led(False, False, False)
+        elif pat == PATT_LED_RED:
+            self.hw.set_led(True, False, False)
+        elif pat == PATT_LED_GREEN:
+            self.hw.set_led(False, True, False)
+        elif pat == PATT_LED_YELLOW:
+            self.hw.set_led(True, True, False)
 
 
     def __button_thread(self):
@@ -220,11 +218,18 @@ class Octobox:
 
             # Handle LED blinking
             led_count += 1
-            if self.blink_pattern:
+
+            if self.led_pattern == PATT_LED_RED_BLINK:
                 if led_count % 10 < 5:
                     self.hw.set_led(False, False, False)
                 else:
                     self.hw.set_led(True, False, False)
+
+            elif self.led_pattern == PATT_LED_GREEN_BLINK:
+                if led_count % 10 < 5:
+                    self.hw.set_led(False, False, False)
+                else:
+                    self.hw.set_led(False, True, False)
 
             # Drop indication
             if (self.drop_callback is not None) and (not self.drop_indicated) and (self.hw.get_drop()):
